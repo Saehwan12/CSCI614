@@ -3,12 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Saehwan Han | Portfolio</title>
 </head>
 <body>
-    <h1>welcome to my Web Page 😂🥹😂</h1>
-    <p> 56 <i> 77</p> 563</i>
-    <p>This is a simple HTML page.</p>
-    <noscript><p title="</noscript><img src=x onerror=alert(1)>">
+
+    <header>
+        <h1>Saehwan Han</h1>
+        
+        <nav>
+            <ul>
+                <li><a href="#about">About</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#experience">Experience</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <hr>
+
+    <main>
+        <section id="about">
+            <h2>About Me</h2>
+            <p>Hello! I am a developer focusing on scalable web architecture.</p>
+            
+            <details>
+                <summary>Read more about my background</summary>
+                <p>I have a degree in Computer Engineering from Korea and will start my Master's in the US in Jan 2026.</p>
+                <p>My goal is to build maintainable systems.</p>
+            </details>
+        </section>
+
+        <hr>
+
+        <section id="projects">
+            <h2>Projects</h2>
+            <p>Each project card follows a consistent structure including a preview image.</p>
+
+            <article>
+                <img src="https://placehold.co/600x400" alt="Screenshot of Portfolio Website" width="300">
+                <h3>Portfolio Website</h3>
+                <p><strong>Tech:</strong> HTML5</p>
+                <p>A static site built with semantic HTML for high maintainability.</p>
+            </article>
+
+            <article>
+                <img src="https://placehold.co/600x400" alt="Dashboard Interface showing API data" width="300">
+                <h3>API Dashboard</h3>
+                <p><strong>Tech:</strong> JavaScript, API</p>
+                <p>Fetches data and renders it using a component-based approach.</p>
+            </article>
+        </section>
+
+        <hr>
+
+        <section id="experience">
+            <h2>Experience</h2>
+            <article>
+                <h3>Frontend Developer Intern</h3>
+                <p>Focus: UI/UX Implementation</p>
+            </article>
+        </section>
+
+        <hr>
+
+        <section id="contact">
+            <h2>Contact Me</h2>
+            <form action="#" method="POST">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+                <br><br>
+
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+                <br><br>
+
+                <fieldset>
+                    <legend>Topic:</legend>
+                    <input type="radio" id="hiring" name="topic" value="hiring" checked>
+                    <label for="hiring">Hiring</label>
+                    <input type="radio" id="collab" name="topic" value="collaboration">
+                    <label for="collab">Collaboration</label>
+                </fieldset>
+                <br>
+
+                <label for="msg">Message:</label><br>
+                <textarea id="msg" name="message" rows="4"></textarea>
+                <br><br>
+
+                <button type="submit">Send Message</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Saehwan Han.</p>
+    </footer>
+
 </body>
 </html>
