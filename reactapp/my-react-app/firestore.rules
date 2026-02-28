@@ -2,7 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /shoppinglist/{document} {
-      allow read, write: if true;
+      // 로그인한 사용자만 접근 가능
+      // 읽기/쓰기는 본인이 생성한 문서만 가능
+      allow read, update, delete: if request.auth != null 
+                                  && request.auth.uid == resource.data.created_by;
+      
+      // 새 문서 생성 시 created_by가 본인의 uid여야 함
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.created_by;
     }
   }
 }
