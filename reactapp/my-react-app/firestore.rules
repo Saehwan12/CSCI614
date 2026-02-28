@@ -3,13 +3,27 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /shoppinglist/{document} {
       // 로그인한 사용자만 접근 가능
-      // 읽기/쓰기는 본인이 생성한 문서만 가능
-      allow read, update, delete: if request.auth != null 
-                                  && request.auth.uid == resource.data.created_by;
+      // 읽기는 본인이 생성한 문서만 가능
+      allow read: if request.auth != null 
+                  && request.auth.uid == resource.data.created_by;
       
-      // 새 문서 생성 시 created_by가 본인의 uid여야 함
+      // 새 문서 생성 시 데이터 검증
       allow create: if request.auth != null 
-                    && request.auth.uid == request.resource.data.created_by;
+                    && request.auth.uid == request.resource.data.created_by
+                    && request.resource.data.content is string
+                    && request.resource.data.content.size() > 0
+                    && request.resource.data.style in ['hot', 'cool', 'complete']
+                    && request.resource.data.createdAt is timestamp;
+      
+      // 업데이트 시 style 검증
+      allow update: if request.auth != null 
+                    && request.auth.uid == resource.data.created_by
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['content', 'created_by', 'createdAt']))
+                    && request.resource.data.style in ['hot', 'cool', 'complete'];
+      
+      // 삭제는 본인이 생성한 문서만 가능
+      allow delete: if request.auth != null 
+                    && request.auth.uid == resource.data.created_by;
     }
   }
 }

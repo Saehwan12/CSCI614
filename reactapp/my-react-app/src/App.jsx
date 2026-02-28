@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import { db, shoppingdata, auth, googleProvider } from './firebase';
-import { addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp, query, where } from "firebase/firestore";
-import { signInWithPopup, signOut } from 'firebase/auth';
+import { addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp, query, where, onSnapshot } from "firebase/firestore";
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 
 function Title() {
   return <h1>My Shopping List</h1>
@@ -23,17 +23,40 @@ function App() {
     return id;
   });
   
+  // Listen to authentication state changes
   useEffect(() => {
-    loadTasks();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
   
-  // Reload tasks when user changes
+  // Real-time listener for tasks when user changes
   useEffect(() => {
-    if (user) {
-      loadTasks();
-    } else {
+    if (!user) {
       setTasklist([]);
+      return;
     }
+
+    // Set up real-time listener
+    const q = query(shoppingdata, where('created_by', '==', user.uid));
+    const unsubscribe = onSnapshot(q, 
+      (querySnapshot) => {
+        const tasks = [];
+        querySnapshot.forEach((doc) => {
+          tasks.push({ id: doc.id, ...doc.data() });
+        });
+        setTasklist(tasks);
+      },
+      (error) => {
+        console.error("Error loading tasks:", error);
+        alert("Failed to load items from database. Please refresh the page.");
+      }
+    );
+
+    // Cleanup listener on unmount or user change
+    return () => unsubscribe();
   }, [user]);
 
   const handelsignin = async () => {
@@ -59,34 +82,8 @@ function App() {
   }
 
   // ========================================
-  // READ: Load all tasks from Firestore
+  // Real-time synchronization handled by useEffect above
   // ========================================
-  async function loadTasks() {
-    if (!user) {
-      setTasklist([]);
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      console.log('Loading tasks for user:', user.uid);
-      // Query only items created by current user
-      const q = query(shoppingdata, where('created_by', '==', user.uid));
-      const querySnapshot = await getDocs(q);
-      const tasks = [];
-      querySnapshot.forEach((doc) => {
-        console.log('Loaded document:', doc.id, doc.data());
-        tasks.push({ id: doc.id, ...doc.data() });
-      });
-      console.log('Total tasks loaded:', tasks.length);
-      setTasklist(tasks);
-    } catch (error) {
-      console.error("Error loading tasks:", error);
-      alert("Failed to load items from database. Please refresh the page.");
-    } finally {
-      setLoading(false);
-    }
-  }
   
   // ========================================
   // CREATE: Add new item to the list
@@ -105,10 +102,9 @@ function App() {
           created_by: user.uid,
           createdAt: serverTimestamp()
         };
-        const docRef = await addDoc(shoppingdata, newTaskData);
-        // For local state, use current date as placeholder until refresh
-        setTasklist([...tasklist, { id: docRef.id, ...newTaskData, createdAt: new Date() }]);
+        await addDoc(shoppingdata, newTaskData);
         event.target.value = "";
+        // Real-time listener will automatically update the UI
       } catch (error) {
         console.error("Error adding task:", error);
         alert("Failed to add item. Please try again.");
@@ -120,24 +116,12 @@ function App() {
   // DELETE: Remove a single item
   // ========================================
   async function deletetask(id) {
-    console.log('Deleting task:', id);
-    
-    // Optimistic update - UI를 먼저 업데이트
-    const previousTasklist = tasklist;
-    const newtasklist = tasklist.filter((task) => task.id !== id);
-    setTasklist(newtasklist);
-    
     try {
       const docRef = doc(db, "shoppinglist", id);
-      console.log('Deleting document:', docRef.path);
       await deleteDoc(docRef);
-      console.log('Delete successful');
+      // Real-time listener will automatically update the UI
     } catch (error) {
       console.error("Error deleting task:", error);
-      console.error("Error code:", error.code);
-      console.error("Error message:", error.message);
-      // When delete fails, revert to previous state
-      setTasklist(previousTasklist);
       alert("Failed to delete item. Please try again.");
     }
   }
@@ -149,31 +133,16 @@ function App() {
     const task = tasklist.find(t => t.id === id);
     if (!task) return;
     
-    console.log('Toggling style for task:', { id, currentStyle: task.style });
-    
     // Cycle through: cool -> complete -> hot -> cool
     const styleOrder = { cool: "complete", complete: "hot", hot: "cool" };
     const newStyle = styleOrder[task.style] || "cool";
     
-    console.log('New style will be:', newStyle);
-    
-    // Optimistic update
-    const previousTasklist = tasklist;
-    const updatedTasklist = tasklist.map(t => 
-      t.id === id ? { ...t, style: newStyle } : t
-    );
-    setTasklist(updatedTasklist);
-    
     try {
       const docRef = doc(db, "shoppinglist", id);
-      console.log('Updating document:', docRef.path);
       await updateDoc(docRef, { style: newStyle });
-      console.log('Update successful');
+      // Real-time listener will automatically update the UI
     } catch (error) {
       console.error("Error updating task style:", error);
-      console.error("Error code:", error.code);
-      console.error("Error message:", error.message);
-      setTasklist(previousTasklist);
       alert("Failed to update item status. Please try again.");
     }
   }
@@ -184,18 +153,14 @@ function App() {
   async function clearAll() {
     if (!window.confirm("Are you sure you want to delete all items?")) return;
     
-    // Optimistic update
-    const previousTasklist = tasklist;
-    setTasklist([]);
-    
     try {
-      const deletePromises = previousTasklist.map(task => 
+      const deletePromises = tasklist.map(task => 
         deleteDoc(doc(db, "shoppinglist", task.id))
       );
       await Promise.all(deletePromises);
+      // Real-time listener will automatically update the UI
     } catch (error) {
       console.error("Error clearing tasks:", error);
-      setTasklist(previousTasklist);
       alert("Failed to clear all items. Please try again.");
     }
   }
@@ -212,19 +177,14 @@ function App() {
     
     if (!window.confirm(`Delete ${completedTasks.length} completed item(s)?`)) return;
     
-    // Optimistic update
-    const previousTasklist = tasklist;
-    const remainingTasks = tasklist.filter(task => task.style !== "complete");
-    setTasklist(remainingTasks);
-    
     try {
       const deletePromises = completedTasks.map(task => 
         deleteDoc(doc(db, "shoppinglist", task.id))
       );
       await Promise.all(deletePromises);
+      // Real-time listener will automatically update the UI
     } catch (error) {
       console.error("Error deleting completed tasks:", error);
-      setTasklist(previousTasklist);
       alert("Failed to delete completed items. Please try again.");
     }
   }
