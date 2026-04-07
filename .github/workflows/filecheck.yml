@@ -1,0 +1,33 @@
+name: Check index.html Exists
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-index:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Check if index.html exists
+      run: |
+        if [ -f "reactapp/my-react-app/index.html" ]; then
+          echo "✓ index.html found in reactapp/my-react-app/"
+          exit 0
+        else
+          echo "✗ index.html NOT found in reactapp/my-react-app/"
+          exit 1
+        fi
+    
+    - name: Check if dist/index.html exists (built version)
+      run: |
+        if [ -f "reactapp/my-react-app/dist/index.html" ]; then
+          echo "✓ dist/index.html found (production build)"
+        else
+          echo "⚠ dist/index.html not found (may need to build)"
+        fi
